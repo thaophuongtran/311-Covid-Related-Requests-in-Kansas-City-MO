@@ -168,12 +168,12 @@ tab_01[is.na(tab_01)] = 0
 
 
 ## plot covid-related words versus new cases
-coef = 0.1
+coef = 0.2
 ggplot(tab_01[11:18,], aes(x=date))+
   geom_col(aes(y=COVID_19_related),lwd=1.50,fill="dodgerblue4")+
   geom_line(aes(y=new_case_count/coef),lwd=1.50,col="green3")+
-  geom_line(aes(y=total_case_count/coef),lwd=1.50,col="red")+
-  scale_y_continuous(name= "Number of requests",sec.axis = sec_axis(~.*coef,name="New cases"))+
+  geom_line(aes(y=total_case_count/coef),lwd=1.50,col="red",lty=2)+
+  scale_y_continuous(name= "Number of requests",sec.axis = sec_axis(~.*coef,name="Number of cases"))+
   labs(x="Date")+
   theme_bw() 
 
