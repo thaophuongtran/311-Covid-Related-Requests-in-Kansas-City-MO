@@ -1,0 +1,212 @@
+---
+title: "Non-Emergency Responses in the 311 System During the Early Stage of the Pandemic: \n A Case Study of Kansas City"
+output: github_document
+---
+
+**Abstract**
+
+In response to the widespread of COVID-19, citizens sought information and support from their city governance through the 311 non-emergency service request system. Our analysis showed that the pandemic has led to a considerable decline in the aggregate number of 311 calls in Kansas City; however, “Public Safety”, “Public Health”, “Trash/Recycling”, “Parks & Recreation”, and “Property / Buildings / Construction” experienced substantial increase in call volume. In order to explore whether these changes are driven by covid-related service requests, we use the description text data and identify 2,379 requests related to the pandemic, accounting for 4.3 percent of all non-emergency requests in Kansas City between March and August of 2020. More than half of covid-related requests reported mask violations where people fail to wear masks or do not wear masks properly. Compared to non-covid-related requests, citizens were more likely to seek non-emergency services through phone and email and less likely to use the web as means of communication.  In addition, the majority of changes in “Public Safety” and “Public Health” request volumes were driven by these covid-related requests.   
+
+**Figures**
+
+```{r setup, include=FALSE}
+#load library
+library(dplyr)
+library(reshape2)
+library(openxlsx)
+library(car)
+library(ggplot2)
+library(hrbrthemes)
+library(viridis)
+
+#load data
+load("kcmo2019_2020.rdata")
+
+# create year+month var
+dat$date = dat$CREATEYR*100 +dat$CREATEMO
+dat$date = as.Date(as.character(dat$date*100+1),"%Y%m%d")
+
+# create covid related calls 
+dat = dat %>%
+  mutate(
+    
+    covid = as.numeric(grepl("covid",tolower(description))|
+                         grepl("corona",tolower(description))|
+                         grepl("pandemic",tolower(description))|
+                         grepl("virus",tolower(description))|
+                         grepl("positive",tolower(description))
+    ),
+    
+    mask = as.numeric(grepl("mask",tolower(description))|
+                        grepl("face cover",tolower(description))|
+                        grepl("ppe ",tolower(description))|
+                        grepl("coverings",tolower(description))
+    ),
+    
+    sdistance = as.numeric(grepl("social",tolower(description))|
+                             grepl("distanc",tolower(description))|
+                             grepl("6 feet",tolower(description))|
+                             grepl("quarantine",tolower(description))|
+                             grepl("stay at home",tolower(description))|
+                             grepl("gathering",tolower(description))
+    ),
+    
+    essential = as.numeric(grepl("essential",tolower(description))|
+                             grepl("still open",tolower(description))|
+                             grepl("open for business",tolower(description))|
+                             grepl("open and operating",tolower(description))|
+                             grepl("still operating",tolower(description))
+                           ), 
+    
+    allcovid = as.numeric(covid==1|mask==1|sdistance==1|essential==1)
+  )
+
+# covid cases data
+covid= read.csv("https://raw.githubusercontent.com/OpportunityInsights/EconomicTracker/main/data/COVID%20-%20City%20-%20Daily.csv")
+covid = covid %>% filter(cityid == 37) %>%  #KCMO code is 37
+                  select(year,month, day, new_case_count,new_death_count) #%>% group_by(year,month) %>% summarise_each(funs(mean(., na.rm = TRUE)))
+covid$new_case_count = as.numeric(covid$new_case_count)
+covid$new_death_count = as.numeric(covid$new_death_count)
+covid = covid %>% group_by(year,month) %>% summarise_each(funs(mean(., na.rm = TRUE)))
+covid$date = as.Date(as.character(covid$year*10000+covid$month*100+1),"%Y%m%d")
+covid = covid %>% select(date,new_case_count,new_death_count)
+
+#create total cases 
+covid[is.na(covid)]=0
+covid = covid %>%
+  mutate(total_case_count = cumsum(new_case_count))
+
+#subset 311 data 
+dat_covid = dat %>% filter(season=="COVID-warm")
+
+```
+
+Figure 1: Monthly number of requests containing COVID-19-related keywords in 2019-2020 
+ 
+```{r figure01, echo=FALSE,fig.height=8,fig.width=8}
+#trends of each keyword
+temp5 = dat %>% group_by(date) %>%
+  summarize(
+    
+    covid = sum(grepl("covid",tolower(description))),
+    corona = sum(grepl("corona",tolower(description))),
+    pandemic = sum(grepl("pandemic",tolower(description))),
+    virus = sum(grepl("virus",tolower(description))),
+    positive = sum(grepl("positive",tolower(description))),
+    
+    mask = sum(grepl("mask",tolower(description))),
+    face_cover = sum(grepl("face cover",tolower(description))),
+    coverings = sum(grepl("coverings",tolower(description))),
+    ppe = sum(grepl("ppe ",tolower(description))),
+    
+    social = sum(grepl("social",tolower(description))),
+    distance = sum(grepl("distanc",tolower(description))),
+    sixfeet = sum(grepl("6 feet",tolower(description))),
+    
+    quarantine = sum(grepl("quarantine",tolower(description))),
+    stayathome = sum(grepl("stay at home",tolower(description))),
+    gathering = sum(grepl("gathering",tolower(description))),
+    
+    essential = sum(grepl("essential",tolower(description))),
+    open = sum(grepl("still open",tolower(description))),
+    open_business = sum(grepl("open for business",tolower(description))),
+    open_operate = sum(grepl("open and operating",tolower(description))),
+    operate = sum(grepl("still operating",tolower(description))),
+  ) 
+
+temp5melt = melt(temp5,id.vars="date")
+temp5melt$Keywords = temp5melt$variable
+ggplot(temp5melt, aes(x=date,y = value, color = reorder(Keywords,-value)))+
+  geom_line(lwd=1.50)+
+  scale_color_viridis(discrete = TRUE) +
+  labs(y="Number of requests",
+      x="Date")+
+  facet_wrap(~reorder(Keywords,-value),ncol=4,scale="free_y")+
+  theme_bw()+
+  theme(legend.position = "none")
+
+```
+
+
+Figure 2: Number of requests during March-August in 2019 versus 2020
+
+```{r figure02, echo=FALSE}
+#plot request volume by category
+dat %>% 
+  filter(season != "PreCOVID-COld") %>%
+  group_by(season,CREATEMO) %>% 
+  count() %>%
+  arrange(desc(season)) %>%
+  mutate(season = ifelse(season == "PreCOVID-Warm","2019","2020"))%>%
+  ggplot(aes(x = CREATEMO, y = n,group=reorder(season,-n),fill=reorder(season,-n) ))+
+  geom_col(position = "dodge")+
+  scale_fill_manual(values = c("dodgerblue4","green3"))+
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
+  labs(y = "Number of requests", x = "Month",fill= "")+
+  ylim(c(0,15000))+
+  theme_bw()+
+  theme(legend.position = c(0.9,0.9),
+        legend.background = element_blank())
+```
+
+
+Figure 3: Number of covid-related requests (green, left axis) vs COVID-19 new cases (blue, right axis) in 2020
+
+```{r figure03, echo = FALSE}
+# trends of covid-re;ated requests  
+tab_01 = dat %>% group_by(date) %>% summarise(
+  #All_Requests = sum(weight,na.rm=T),
+  COVID_19_related = sum(allcovid,na.rm=T),
+  #public_health = sum(CATEGORY=="Public Health",na.rm=T),
+  #public_safety = sum(CATEGORY=="Public Safety",na.rm=T),
+  
+) #%>% melt(id.vars="date")
+
+#join with covid cases
+tab_01 = tab_01 %>% left_join(covid,by="date")
+tab_01[is.na(tab_01)] = 0
+
+
+## plot covid-related words versus new cases
+coef = 0.1
+ggplot(tab_01[11:18,], aes(x=date))+
+  geom_col(aes(y=COVID_19_related),lwd=1.50,fill="dodgerblue4")+
+  geom_line(aes(y=new_case_count/coef),lwd=1.50,col="green3")+
+  geom_line(aes(y=total_case_count/coef),lwd=1.50,col="red")+
+  scale_y_continuous(name= "Number of requests",sec.axis = sec_axis(~.*coef,name="New cases"))+
+  labs(x="Date")+
+  theme_bw() 
+
+```
+
+
+Figure 4: Year-over-year change in covid-related requests (darker blue) vs year-over-year change in total requests (lighter blue) by category from March to August 2020
+
+```{r figure04,echo=FALSE,fig.width=8}
+#y/y chg
+diff = dat %>% 
+  filter(CATEGORY %in% c("Public Health","Public Safety","Parks & Recreation","Property / Buildings / Construction","Trash / Recycling")) %>%
+  group_by(CATEGORY,CREATEYR,CREATEMO) %>% 
+  count() %>% 
+  dcast(CATEGORY+CREATEMO~CREATEYR) %>% 
+  mutate(diff = `2020`-`2019`)%>% 
+  na.omit()  
+
+#covid related requests
+diffcovid = dat_covid %>% 
+  filter(CATEGORY %in% c("Public Health","Public Safety","Parks & Recreation","Property / Buildings / Construction","Trash / Recycling")) %>%
+  group_by(CATEGORY,CREATEMO,date) %>%
+  summarize(covid= sum(allcovid)) 
+
+#plot by category and date
+diffcovid %>% 
+  merge(diff) %>% 
+  ggplot(aes(y =diff, x = date)) +
+  geom_col(fill="dodgerblue4",alpha=0.2)+
+  geom_col(aes(y=covid),fill="dodgerblue4")+
+  facet_wrap(~reorder(CATEGORY,covid),scale="free_y",ncol=3)+
+  labs(y="Year-over-year Change In Number of Requests",x="Date")+
+  theme_bw()
+
+```
+
