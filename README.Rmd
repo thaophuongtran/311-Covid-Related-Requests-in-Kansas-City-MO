@@ -83,7 +83,7 @@ dat_covid = dat %>% filter(season=="COVID-warm")
 
 Figure 1: Monthly number of requests containing COVID-19-related keywords in 2019-2020 
  
-```{r figure01, echo=FALSE,fig.height=8,fig.width=8}
+```{r figure01, echo=FALSE,fig.height=8,fig.width=8, dpi=300}
 #trends of each keyword
 temp5 = dat %>% group_by(date) %>%
   summarize(
@@ -116,12 +116,19 @@ temp5 = dat %>% group_by(date) %>%
 
 temp5melt = melt(temp5,id.vars="date")
 temp5melt$Keywords = temp5melt$variable
-ggplot(temp5melt, aes(x=date,y = value, color = reorder(Keywords,-value)))+
+temp5melt$Keyorder = case_when(
+  temp5melt$Keywords %in% c("distance", "social","covid","pandemic","sixfeet","ppe") ~ 1,
+  temp5melt$Keywords %in% c("essential", "stayathome","open","operate","open_business","open_operate") ~ 2,
+  temp5melt$Keywords %in% c("gathering", "virus","corona","quarantine") ~ 3,
+  temp5melt$Keywords %in% c("mask", "positive","face_cover","coverings") ~ 4
+)
+#plot
+ggplot(temp5melt, aes(x=date,y = value, color = reorder(Keywords,Keyorder)))+
   geom_line(lwd=1.50)+
   scale_color_viridis(discrete = TRUE) +
   labs(y="Number of requests",
       x="Date")+
-  facet_wrap(~reorder(Keywords,-value),ncol=4,scale="free_y")+
+  facet_wrap(~reorder(Keywords,Keyorder),ncol=4,scale="free_y")+
   theme_bw()+
   theme(legend.position = "none")
 
@@ -130,7 +137,7 @@ ggplot(temp5melt, aes(x=date,y = value, color = reorder(Keywords,-value)))+
 
 Figure 2: Number of requests during March-August in 2019 versus 2020
 
-```{r figure02, echo=FALSE}
+```{r figure02, echo=FALSE, dpi=300}
 #plot request volume by category
 dat %>% 
   filter(season != "PreCOVID-COld") %>%
@@ -140,7 +147,7 @@ dat %>%
   mutate(season = ifelse(season == "PreCOVID-Warm","2019","2020"))%>%
   ggplot(aes(x = CREATEMO, y = n,group=reorder(season,-n),fill=reorder(season,-n) ))+
   geom_col(position = "dodge")+
-  scale_fill_manual(values = c("dodgerblue4","green3"))+
+  scale_fill_manual(values = c("dodgerblue4","red4"))+
   scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
   labs(y = "Number of requests", x = "Month",fill= "")+
   ylim(c(0,15000))+
@@ -152,7 +159,7 @@ dat %>%
 
 Figure 3: Number of covid-related requests (green, left axis) vs COVID-19 new cases (blue, right axis) in 2020
 
-```{r figure03, echo = FALSE}
+```{r figure03, echo = FALSE, dpi=300}
 # trends of covid-re;ated requests  
 tab_01 = dat %>% group_by(date) %>% summarise(
   #All_Requests = sum(weight,na.rm=T),
@@ -182,7 +189,7 @@ ggplot(tab_01[11:18,], aes(x=date))+
 
 Figure 4: Year-over-year change in covid-related requests (darker blue) vs year-over-year change in total requests (lighter blue) by category from March to August 2020
 
-```{r figure04,echo=FALSE,fig.width=8}
+```{r figure04,echo=FALSE,fig.width=8, dpi=300}
 #y/y chg
 diff = dat %>% 
   filter(CATEGORY %in% c("Public Health","Public Safety","Parks & Recreation","Property / Buildings / Construction","Trash / Recycling")) %>%
@@ -206,7 +213,8 @@ diffcovid %>%
   geom_col(aes(y=covid),fill="dodgerblue4")+
   facet_wrap(~reorder(CATEGORY,covid),scale="free_y",ncol=3)+
   labs(y="Year-over-year Change In Number of Requests",x="Date")+
-  theme_bw()
+  theme_bw()#+ 
+  #theme(text = element_text(size = 20))  
 
 ```
 
