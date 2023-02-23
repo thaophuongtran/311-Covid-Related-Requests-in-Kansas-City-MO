@@ -18,6 +18,16 @@ library(car)
 library(ggplot2)
 library(hrbrthemes)
 library(viridis)
+#load library for word association graph
+library(magrittr)
+library(purrr)
+library(tibble)
+library(dplyr)
+library(tidyr)
+library(tidytext)
+library(igraph)
+library(ggraph)
+library(corpus)
 
 #load data
 load("kcmo2019_2020.rdata")
@@ -217,4 +227,57 @@ diffcovid %>%
   #theme(text = element_text(size = 20))  
 
 ```
+
+Words Association Graph 
+
+```{r, echo = FALSE, dpi = 300,fig.width=8,fig.height=3.5}
+#combine requests text 
+text_bigram = dat_covid %>% filter(allcovid==1) %>% 
+  select(description) %>% 
+  #mutate(description = gsub("Description: ","",description)) %>%  
+  unnest_tokens(bigram, description, token = "ngrams", n=2) 
+
+#Remove stop words from our dataset
+my_stop_words <- tibble(
+  word = c("the","description"))
+all_stop_words <- stop_words %>%
+  bind_rows(my_stop_words)
+
+bigrams_filtered =  text_bigram %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% all_stop_words$word) %>%
+  filter(!word2 %in% all_stop_words$word) %>% 
+  mutate(
+    word1 = text_tokens(word1, stemmer = "en"),
+    word2 = text_tokens(word2, stemmer = "en"),
+         )
+#To check how many words removed after stop word anti join
+# tibble(total_words = nrow(text_bigram),
+#   after_cleanup = nrow(bigrams_filtered))
+
+#Get bigrams that occur for more than 4 times
+bigram_tograph = bigrams_filtered %>% 
+  group_by(word1,word2) %>% count()%>%
+  filter(n > 20)
+
+#Draw the network graph with the ggraph function and specify properties of the nodes (edge, point, text) and add title, subtitles, etc. to the graph
+bigram_tograph %>%
+  graph_from_data_frame()  %>% 
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(width = n,edge_alpha = n), show.legend = FALSE,edge_colour = "red",lwd = 2.5) +
+  scale_edge_width(range = c(0.5,2.5))+
+  scale_edge_alpha(range = c(0.3,1))+
+  geom_node_point(color = "black") +
+  geom_node_text(aes(label = name), vjust = 0.1, hjust =-0.1,  repel = TRUE,col = "dodgerblue4") +
+  labs(x="",y="") +
+  #theme_bw()+
+  theme(axis.text = element_blank(),
+        panel.background = element_rect(fill = "white"))
+
+```
+
+
+
+
+
 

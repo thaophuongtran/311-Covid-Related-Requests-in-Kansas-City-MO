@@ -48,3 +48,9 @@ from March to August 2020
     ## `summarise()` has grouped output by 'CATEGORY', 'CREATEMO'. You can override using the `.groups` argument.
 
 ![](README_files/figure-gfm/figure04-1.png)<!-- -->
+
+Words Association Graph
+
+    ## Warning: Ignoring unknown parameters: size
+
+![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
