@@ -230,7 +230,7 @@ diffcovid %>%
 
 Words Association Graph 
 
-```{r, echo = FALSE, dpi = 300,fig.width=8,fig.height=3.5}
+```{r word assoc, echo = FALSE, dpi = 300,fig.width=8,fig.height=3.5}
 #combine requests text 
 text_bigram = dat_covid %>% filter(allcovid==1) %>% 
   select(description) %>% 

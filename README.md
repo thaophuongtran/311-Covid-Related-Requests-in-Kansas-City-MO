@@ -53,4 +53,4 @@ Words Association Graph
 
     ## Warning: Ignoring unknown parameters: size
 
-![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+![](README_files/figure-gfm/word%20assoc-1.png)<!-- -->
