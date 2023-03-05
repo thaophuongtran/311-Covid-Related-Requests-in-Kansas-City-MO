@@ -98,39 +98,39 @@ Figure 1: Monthly number of requests containing COVID-19-related keywords in 201
 temp5 = dat %>% group_by(date) %>%
   summarize(
     
-    covid = sum(grepl("covid",tolower(description))),
-    corona = sum(grepl("corona",tolower(description))),
-    pandemic = sum(grepl("pandemic",tolower(description))),
-    virus = sum(grepl("virus",tolower(description))),
-    positive = sum(grepl("positive",tolower(description))),
+    `covid` = sum(grepl("covid",tolower(description))),
+    `corona` = sum(grepl("corona",tolower(description))),
+    `pandemic` = sum(grepl("pandemic",tolower(description))),
+    `virus` = sum(grepl("virus",tolower(description))),
+    `positive` = sum(grepl("positive",tolower(description))),
     
-    mask = sum(grepl("mask",tolower(description))),
-    face_cover = sum(grepl("face cover",tolower(description))),
-    coverings = sum(grepl("coverings",tolower(description))),
-    ppe = sum(grepl("ppe ",tolower(description))),
+    `mask` = sum(grepl("mask",tolower(description))),
+    `face cover` = sum(grepl("face cover",tolower(description))),
+    `coverings` = sum(grepl("coverings",tolower(description))),
+    `ppe` = sum(grepl("ppe ",tolower(description))),
     
-    social = sum(grepl("social",tolower(description))),
-    distance = sum(grepl("distanc",tolower(description))),
-    sixfeet = sum(grepl("6 feet",tolower(description))),
+    `social` = sum(grepl("social",tolower(description))),
+    `distanc` = sum(grepl("distanc",tolower(description))),
+    `6 feet` = sum(grepl("6 feet",tolower(description))),
     
-    quarantine = sum(grepl("quarantine",tolower(description))),
-    stayathome = sum(grepl("stay at home",tolower(description))),
-    gathering = sum(grepl("gathering",tolower(description))),
+    `quarantine` = sum(grepl("quarantine",tolower(description))),
+    `stay at home` = sum(grepl("stay at home",tolower(description))),
+    `gathering` = sum(grepl("gathering",tolower(description))),
     
-    essential = sum(grepl("essential",tolower(description))),
-    open = sum(grepl("still open",tolower(description))),
-    open_business = sum(grepl("open for business",tolower(description))),
-    open_operate = sum(grepl("open and operating",tolower(description))),
-    operate = sum(grepl("still operating",tolower(description))),
+    `essential` = sum(grepl("essential",tolower(description))),
+    `still open` = sum(grepl("still open",tolower(description))),
+    `open for business` = sum(grepl("open for business",tolower(description))),
+    `open and operating` = sum(grepl("open and operating",tolower(description))),
+    `still operating` = sum(grepl("still operating",tolower(description))),
   ) 
 
 temp5melt = melt(temp5,id.vars="date")
 temp5melt$Keywords = temp5melt$variable
 temp5melt$Keyorder = case_when(
-  temp5melt$Keywords %in% c("distance", "social","covid","pandemic","sixfeet","ppe") ~ 1,
-  temp5melt$Keywords %in% c("essential", "stayathome","open","operate","open_business","open_operate") ~ 2,
+  temp5melt$Keywords %in% c("distanc", "social","covid","pandemic","6 feet","ppe") ~ 1,
+  temp5melt$Keywords %in% c("essential", "stay at home","still open","still operating","open for business","open and operating") ~ 2,
   temp5melt$Keywords %in% c("gathering", "virus","corona","quarantine") ~ 3,
-  temp5melt$Keywords %in% c("mask", "positive","face_cover","coverings") ~ 4
+  temp5melt$Keywords %in% c("mask", "positive","face cover","coverings") ~ 4
 )
 #plot
 ggplot(temp5melt, aes(x=date,y = value, color = reorder(Keywords,Keyorder)))+
@@ -159,8 +159,8 @@ dat %>%
   geom_col(position = "dodge")+
   scale_fill_manual(values = c("dodgerblue4","red4"))+
   scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
+  scale_y_continuous(labels=scales::comma,limit = c(0,15000)) +
   labs(y = "Number of requests", x = "Month",fill= "")+
-  ylim(c(0,15000))+
   theme_bw()+
   theme(legend.position = c(0.9,0.9),
         legend.background = element_blank())
@@ -222,6 +222,7 @@ diffcovid %>%
   geom_col(fill="dodgerblue4",alpha=0.2)+
   geom_col(aes(y=covid),fill="dodgerblue4")+
   facet_wrap(~reorder(CATEGORY,covid),scale="free_y",ncol=3)+
+  scale_y_continuous(labels=scales::comma) +
   labs(y="Year-over-year Change In Number of Requests",x="Date")+
   theme_bw()#+ 
   #theme(text = element_text(size = 20))  

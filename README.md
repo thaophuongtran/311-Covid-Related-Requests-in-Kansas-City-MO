@@ -28,6 +28,9 @@ requests.
 Figure 1: Monthly number of requests containing COVID-19-related
 keywords in 2019-2020
 
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
+
 ![](README_files/figure-gfm/figure01-1.png)<!-- -->
 
 Figure 2: Number of requests during March-August in 2019 versus 2020
@@ -45,12 +48,14 @@ from March to August 2020
 
     ## Using n as value column: use value.var to override.
 
-    ## `summarise()` has grouped output by 'CATEGORY', 'CREATEMO'. You can override using the `.groups` argument.
+    ## `summarise()` has grouped output by 'CATEGORY', 'CREATEMO'. You can override
+    ## using the `.groups` argument.
 
 ![](README_files/figure-gfm/figure04-1.png)<!-- -->
 
 Words Association Graph
 
-    ## Warning: Ignoring unknown parameters: size
+    ## Warning: Using the `size` aesthetic in this geom was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` in the `default_aes` field and elsewhere instead.
 
 ![](README_files/figure-gfm/word%20assoc-1.png)<!-- -->
