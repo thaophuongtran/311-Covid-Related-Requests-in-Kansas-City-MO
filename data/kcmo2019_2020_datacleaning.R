@@ -1,9 +1,9 @@
+#load library
 library(dplyr)
 library(reshape2)
 library(openxlsx)
 library(car)
-
-#change directory
+library(rvest)
 
 #######################################
 # Data Cleaning
@@ -40,26 +40,14 @@ dat$weight = 1
 #######################################
 # Scraping
 #######################################
-
-diseasecontrol = dat %>% filter(REQTYPE == "Public Health-Disease Control-All")
-
-library(rvest)
-
-diseasecontrol$resol_sum = NA
-diseasecontrol$resol_des = NA
-
-diseasecontrol$resol_sum2 = NA
-diseasecontrol$resol_des2 = NA
-
-for (i in  1:length(diseasecontrol$CASEURL)){
-
+for (i in  1:length(dat$CASEURL)){
+  
   tryCatch({
-    diseasecontrol$resol_sum[i] = strsplit((read_html(diseasecontrol$CASEURL[i])%>% html_nodes("tr") %>% html_text()),"\r\n")[[1]][5]
-    diseasecontrol$resol_des[i] = strsplit((read_html(diseasecontrol$CASEURL[i])%>% html_nodes("tr") %>% html_text()),"\r\n")[[1]][7]
-
-    diseasecontrol$resol_sum2[i] = gsub("  ","",toString(diseasecontrol$resol_sum[i]))
-    diseasecontrol$resol_des2[i] = gsub("  ","",toString(diseasecontrol$resol_des[i]))
-
+    #scrape description
+    dat$description[i] = strsplit((read_html(diseasecontrol$CASEURL[1])%>% html_nodes("tr") %>% html_text()),"\r\n")[[10]][3]
+    #remove double spaces
+    dat$description[i] = gsub("  ","",toString(dat$description[i]))
+    
     print(i)
   }, error=function(e){"ERROR"})
 }
