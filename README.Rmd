@@ -12,6 +12,7 @@ In response to the COVID-19 pandemic, many U.S. citizens sought information and 
 ```{r setup, include=FALSE}
 #load library
 library(dplyr)
+options(dplyr.summarise.inform =FALSE)
 library(reshape2)
 library(openxlsx)
 library(car)
@@ -32,11 +33,11 @@ library(corpus)
 #load data
 load("data/kcmo2019_2020.rdata")
 
-# create year+month var
+#create year+month var
 dat$date = dat$CREATEYR*100 +dat$CREATEMO
 dat$date = as.Date(as.character(dat$date*100+1),"%Y%m%d")
 
-# create covid related calls 
+#identify covid related calls 
 dat = dat %>%
   mutate(
     
@@ -71,7 +72,7 @@ dat = dat %>%
     allcovid = as.numeric(covid==1|mask==1|sdistance==1|essential==1)
   )
 
-# covid cases data
+#load covid cases data
 covid= read.csv("https://raw.githubusercontent.com/OpportunityInsights/EconomicTracker/main/data/COVID%20-%20City%20-%20Daily.csv")
 covid = covid %>% filter(cityid == 37) %>%  #KCMO code is 37
                   select(year,month, day, new_case_count,new_death_count) #%>% group_by(year,month) %>% summarise_each(funs(mean(., na.rm = TRUE)))
@@ -81,7 +82,7 @@ covid = covid %>% group_by(year,month) %>% summarise_each(funs(mean(., na.rm = T
 covid$date = as.Date(as.character(covid$year*10000+covid$month*100+1),"%Y%m%d")
 covid = covid %>% select(date,new_case_count,new_death_count)
 
-#create total cases 
+#calculate total cases 
 covid[is.na(covid)]=0
 covid = covid %>%
   mutate(total_case_count = cumsum(new_case_count))
@@ -93,9 +94,9 @@ dat_covid = dat %>% filter(season=="COVID-warm")
 
 Figure 1: Monthly number of requests containing COVID-19-related keywords in 2019-2020 
  
-```{r figure01, echo=FALSE,fig.height=8,fig.width=8, dpi=300}
-#trends of each keyword
-temp5 = dat %>% group_by(date) %>%
+```{r figure01, echo=FALSE, warning=FALSE, message=FALSE,fig.height=8,fig.width=8, dpi=300}
+#Calculate volume of requests containing each keyword over time 
+tab_00 = dat %>% group_by(date) %>%
   summarize(
     
     `covid` = sum(grepl("covid",tolower(description))),
@@ -122,45 +123,50 @@ temp5 = dat %>% group_by(date) %>%
     `open for business` = sum(grepl("open for business",tolower(description))),
     `open and operating` = sum(grepl("open and operating",tolower(description))),
     `still operating` = sum(grepl("still operating",tolower(description))),
-  ) 
- 
-temp5melt = melt(temp5,id.vars="date")
-temp5melt$Keywords = temp5melt$variable
-temp5melt$Keyorder = case_when(
-  temp5melt$Keywords %in% c("distanc", "social","covid","pandemic","6 feet","ppe") ~ 1,
-  temp5melt$Keywords %in% c("essential", "stay at home","still open","still operating","open for business","open and operating") ~ 2,
-  temp5melt$Keywords %in% c("gathering", "virus","corona","quarantine") ~ 3,
-  temp5melt$Keywords %in% c("mask", "positive","face cover","coverings") ~ 4
+  ) %>% 
+  melt(id.vars="date") %>%
+  mutate(
+    Keywords = variable,
+    Keyorder = case_when(
+      Keywords %in% c("distanc", "social","covid","pandemic","6 feet","ppe") ~ 1,
+      Keywords %in% c("essential", "stay at home","still open","still operating","open for business","open and operating") ~ 2,
+      Keywords %in% c("gathering", "virus","corona","quarantine") ~ 3,
+      Keywords %in% c("mask", "positive","face cover","coverings") ~ 4
 )
-#plot
-ggplot(temp5melt, aes(x=date,y = value, color = reorder(Keywords,Keyorder)))+
+)
+
+#Line Plot of key words over time
+ggplot(tab_00, aes(x=date,y = value, color = reorder(Keywords,Keyorder)))+
   geom_line(lwd=1.50)+
   scale_color_viridis(discrete = TRUE) +
+  scale_x_date(date_breaks= "3 months",date_labels = "%b-%y")+
   labs(y="Number of requests",
-      x="Date")+
+      x="")+
   facet_wrap(~reorder(Keywords,Keyorder),ncol=4,scale="free_y")+
   theme_bw()+
-  theme(legend.position = "none")
+  theme(legend.position = "none",axis.text.x = element_text(angle = 90))
 
 ```
 
 
 Figure 2: Number of requests during March-August in 2019 versus 2020
 
-```{r figure02, echo=FALSE, dpi=300}
-#plot request volume by category
+```{r figure02, echo=FALSE, warning=FALSE, message=FALSE, dpi=300}
+#Plot request volume by category in 2019 versus 2020
 dat %>% 
   filter(season != "PreCOVID-COld") %>%
   group_by(season,CREATEMO) %>% 
   count() %>%
   arrange(desc(season)) %>%
-  mutate(season = ifelse(season == "PreCOVID-Warm","2019","2020"))%>%
+  mutate(
+    season = ifelse(season == "PreCOVID-Warm","2019","2020"),
+    CREATEMO = factor(CREATEMO,levels = 3:8, labels = c("Mar","Apr","May","Jun","Jul","Aug")))%>%
   ggplot(aes(x = CREATEMO, y = n,group=reorder(season,-n),fill=reorder(season,-n) ))+
   geom_col(position = "dodge")+
   scale_fill_manual(values = c("dodgerblue4","red4"))+
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
+  #scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
   scale_y_continuous(labels=scales::comma,limit = c(0,15000)) +
-  labs(y = "Number of requests", x = "Month",fill= "")+
+  labs(y = "Number of requests", x = "",fill= "")+
   theme_bw()+
   theme(legend.position = c(0.9,0.9),
         legend.background = element_blank())
@@ -169,37 +175,33 @@ dat %>%
 
 Figure 3: Number of covid-related requests (green, left axis) vs COVID-19 new cases (blue, right axis) in 2020
 
-```{r figure03, echo = FALSE, dpi=300}
-# trends of covid-re;ated requests  
-tab_01 = dat %>% group_by(date) %>% summarise(
-  #All_Requests = sum(weight,na.rm=T),
-  COVID_19_related = sum(allcovid,na.rm=T),
-  #public_health = sum(CATEGORY=="Public Health",na.rm=T),
-  #public_safety = sum(CATEGORY=="Public Safety",na.rm=T),
-  
-) #%>% melt(id.vars="date")
+```{r figure03, echo = FALSE, warning=FALSE, message=FALSE, dpi=300}
+#Trends of covid-related requests  
+tab_01 = dat %>% group_by(date) %>% 
+  summarise(COVID_19_related = sum(allcovid,na.rm=T))
 
-#join with covid cases
+#Join with covid cases
 tab_01 = tab_01 %>% left_join(covid,by="date")
 tab_01[is.na(tab_01)] = 0
 
 
-## plot covid-related words versus new cases
+#Plot covid-related words versus new cases
 coef = 0.2
 ggplot(tab_01[11:18,], aes(x=date))+
   geom_col(aes(y=COVID_19_related),lwd=1.50,fill="dodgerblue4")+
   geom_line(aes(y=new_case_count/coef),lwd=1.50,col="green3")+
   geom_line(aes(y=total_case_count/coef),lwd=1.50,col="red",lty=2)+
+  scale_x_date(date_breaks= "1 month", date_labels = "%b-%y")+
   scale_y_continuous(name= "Number of requests",sec.axis = sec_axis(~.*coef,name="Number of cases"))+
-  labs(x="Date")+
+  labs(x="")+
   theme_bw() 
 
 ```
 
 Figure 4: Words Association Graph 
 
-```{r word assoc, echo = FALSE, dpi = 300,fig.width=8,fig.height=3.5}
-#combine requests text 
+```{r figure04, echo = FALSE, warning=FALSE, message=FALSE, dpi = 300,fig.width=8,fig.height=3.5}
+#Combine requests text 
 text_bigram = dat_covid %>% filter(allcovid==1) %>% 
   select(description) %>% 
   #mutate(description = gsub("Description: ","",description)) %>%  
@@ -219,11 +221,8 @@ bigrams_filtered =  text_bigram %>%
     word1 = text_tokens(word1, stemmer = "en"),
     word2 = text_tokens(word2, stemmer = "en"),
          )
-#To check how many words removed after stop word anti join
-# tibble(total_words = nrow(text_bigram),
-#   after_cleanup = nrow(bigrams_filtered))
 
-#Get bigrams that occur for more than 4 times
+#Get bigrams that occur for more than 20 times
 bigram_tograph = bigrams_filtered %>% 
   group_by(word1,word2) %>% count()%>%
   filter(n > 20)
@@ -247,8 +246,8 @@ bigram_tograph %>%
 
 Figure 5: Year-over-year change in covid-related requests (darker blue) vs year-over-year change in total requests (lighter blue) by category from March to August 2020
 
-```{r figure04,echo=FALSE,fig.width=8, dpi=300}
-#y/y chg
+```{r figure05,echo=FALSE, warning=FALSE, message=FALSE,fig.width=8, dpi=300}
+#Calculate year over year change
 diff = dat %>% 
   filter(CATEGORY %in% c("Public Health","Public Safety","Parks & Recreation","Property / Buildings / Construction","Trash / Recycling")) %>%
   group_by(CATEGORY,CREATEYR,CREATEMO) %>% 
@@ -257,23 +256,28 @@ diff = dat %>%
   mutate(diff = `2020`-`2019`)%>% 
   na.omit()  
 
-#covid related requests
+#Calculate covid related requests
 diffcovid = dat_covid %>% 
   filter(CATEGORY %in% c("Public Health","Public Safety","Parks & Recreation","Property / Buildings / Construction","Trash / Recycling")) %>%
   group_by(CATEGORY,CREATEMO,date) %>%
   summarize(covid= sum(allcovid)) 
 
-#plot by category and date
+#Create labels for alpha values 
+alpha = c("All requests"=0.2,"Covid-related requests"=1)
+
+#Plot by category and date
 diffcovid %>% 
   merge(diff) %>% 
   ggplot(aes(y =diff, x = date)) +
-  geom_col(fill="dodgerblue4",alpha=0.2)+
-  geom_col(aes(y=covid),fill="dodgerblue4")+
+  geom_col(aes(alpha="All requests"),fill="dodgerblue4")+
+  geom_col(aes(y=covid,alpha = "Covid-related requests"),fill="dodgerblue4")+
   facet_wrap(~reorder(CATEGORY,covid),scale="free_y",ncol=3)+
+  scale_x_date(date_breaks= "1 month", date_labels = "%b")+
   scale_y_continuous(labels=scales::comma) +
-  labs(y="Year-over-year Change In Number of Requests",x="Date")+
-  theme_bw()#+ 
-  #theme(text = element_text(size = 20))  
+  scale_alpha_manual(values = alpha)+
+  labs(y="Year-over-year Change In Number of Requests",x="",alpha="")+
+  theme_bw()+ 
+  theme(legend.position = c(0.85,0.1))  
 
 ```
 

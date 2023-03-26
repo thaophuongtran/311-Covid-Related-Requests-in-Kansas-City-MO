@@ -64,6 +64,6 @@ for (i in  1:length(diseasecontrol$CASEURL)){
   }, error=function(e){"ERROR"})
 }
 
-#save data for futher analysis
-save(dat, "C:/Users/bebut/Downloads/kcmo2019_2020.rdata")
+#save data for further analysis
+save(dat, "data/kcmo2019_2020.rdata")
 
